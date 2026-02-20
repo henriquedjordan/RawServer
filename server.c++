@@ -23,6 +23,8 @@ int main() {
 
     char response[BUFFER];
 
+    char buffer[BUFFER];
+
     const char *html;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -51,16 +53,11 @@ int main() {
 
     std::cout << "\nListen on port 8080...\n" << std::endl;
 
-    if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &address_len)) < 0) {
-        perror("ACCEPT FAILED!:\n");
-        exit(EXIT_FAILURE);
-    }
-
     html = 
     "<!DOCTYPE html>"
     "<html>"
     "<head><title>Manual HTTP</title></head>"
-    "<body><h1>HTTP server running at port 8080...</h1></body>"
+    "<body><h4>HTTP server running at port 8080!</h4></body>"
     "</html>";
 
     sn_response = snprintf(response, sizeof(response), 
@@ -76,13 +73,32 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    if (send(new_socket, response, strlen(response), 0) < 0) {
-        perror("SEND FAILED!:\n");
-        exit(EXIT_FAILURE);
+    while (true) {
+
+        std::cout << "Waiting for connections...\n" << std::endl;
+
+        if ((new_socket = accept(server_fd, (struct sockaddr*)&address, &address_len)) < 0) {
+            perror("ACCEPT FAILED!:\n");
+            exit(EXIT_FAILURE);
+        }
+
+        memset(buffer, 0, sizeof(buffer));
+
+        if(recv(new_socket, buffer, sizeof(buffer), 0) < 0) {
+            perror("RECEIVE FAILED!:\n");
+            exit(EXIT_FAILURE);
+        }
+
+        std::cout << "RECEIVED REQUEST:\n" << buffer << std::endl;
+
+
+        if (send(new_socket, response, strlen(response), 0) < 0) {
+            perror("SEND FAILED!:\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     close(server_fd);
-    close(new_socket);
 
     return 0;
 }
