@@ -19,11 +19,11 @@ int main() {
 
     int opt = 1;
 
-    int sn_response;
+    int sn_server_response;
 
-    char response[BUFFER];
+    char server_response[BUFFER];
 
-    char buffer[BUFFER];
+    char client_request[BUFFER];
 
     const char *html;
 
@@ -51,7 +51,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    std::cout << "\nListen on port 8080...\n" << std::endl;
+    std::cout << "\nListen on port 8080!\n" << std::endl;
 
     html = 
     "<!DOCTYPE html>"
@@ -60,7 +60,7 @@ int main() {
     "<body><h4>HTTP server running at port 8080!</h4></body>"
     "</html>";
 
-    sn_response = snprintf(response, sizeof(response), 
+    sn_server_response = snprintf(server_response, sizeof(server_response), 
     "HTTP/1.1 200 OK\r\n"
     "Content-type: text/html; charset=utf-8\r\n"
     "Content-length: %zu\r\n"
@@ -68,7 +68,7 @@ int main() {
     "%s",
     strlen(html), html);
 
-    if (sn_response < 0) {
+    if (sn_server_response < 0) {
         perror("FORMATING ERROR!:\n");
         exit(EXIT_FAILURE);
     }
@@ -82,17 +82,28 @@ int main() {
             exit(EXIT_FAILURE);
         }
 
-        memset(buffer, 0, sizeof(buffer));
+        memset(client_request, 0, sizeof(client_request));
 
-        if(recv(new_socket, buffer, sizeof(buffer), 0) < 0) {
+        if(recv(new_socket, client_request, sizeof(client_request), 0) < 0) {
             perror("RECEIVE FAILED!:\n");
             exit(EXIT_FAILURE);
         }
 
-        std::cout << "RECEIVED REQUEST:\n" << buffer << std::endl;
+        std::cout << "RECEIVED REQUEST:\n" << client_request << std::endl;
 
+        std::string request(client_request);
 
-        if (send(new_socket, response, strlen(response), 0) < 0) {
+        size_t line_end = request.find("\n\r");
+        std::string request_line = request.substr(0, line_end);
+
+        size_t first_space = request_line.find(" ");
+        size_t second_space = request_line.find(" ", first_space + 1);
+
+        std::string method = request_line.substr(0, first_space);
+        std::string path = request_line.substr(first_space + 1, second_space - first_space - 1);
+        std::string http_version = request_line.substr(second_space + 1);
+
+        if (send(new_socket, server_response, strlen(server_response), 0) < 0) {
             perror("SEND FAILED!:\n");
             exit(EXIT_FAILURE);
         }
