@@ -19,13 +19,13 @@ int main() {
 
     int opt = 1;
 
-    int sn_server_response;
-
     char server_response[BUFFER];
 
     char client_request[BUFFER];
 
-    const char *html;
+    const char *get_html;
+
+    const char *html_header;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("SOCKET CREATION FAILED!:\n");
@@ -53,25 +53,20 @@ int main() {
 
     std::cout << "\nListen on port 8080!\n" << std::endl;
 
-    html = 
-    "<!DOCTYPE html>"
-    "<html>"
-    "<head><title>Manual HTTP</title></head>"
-    "<body><h4>HTTP server running at port 8080!</h4></body>"
-    "</html>";
-
-    sn_server_response = snprintf(server_response, sizeof(server_response), 
+    html_header = 
     "HTTP/1.1 200 OK\r\n"
     "Content-type: text/html; charset=utf-8\r\n"
     "Content-length: %zu\r\n"
     "\r\n"
-    "%s",
-    strlen(html), html);
+    "%s";
 
-    if (sn_server_response < 0) {
-        perror("FORMATING ERROR!:\n");
-        exit(EXIT_FAILURE);
-    }
+    get_html = 
+    "<!DOCTYPE html>"
+    "<html>"
+    "<head><title>RawServer</title></head>"
+    "<body><h2>GET REQUEST</h2></body>"
+    "<body><h4>HTTP server running at port 8080!</h4></body>"
+    "</html>";
 
     while (true) {
 
@@ -101,11 +96,20 @@ int main() {
 
         std::string method = request_line.substr(0, first_space);
         std::string path = request_line.substr(first_space + 1, second_space - first_space - 1);
-        std::string http_version = request_line.substr(second_space + 1);
 
-        if (send(new_socket, server_response, strlen(server_response), 0) < 0) {
-            perror("SEND FAILED!:\n");
-            exit(EXIT_FAILURE);
+        if (method == "GET" && path == "/") {
+
+            if ((snprintf(server_response, sizeof(server_response), html_header, strlen(get_html), get_html)) < 0) {
+                perror("FORMATING ERROR!:\n");
+                exit(EXIT_FAILURE);
+            }
+
+            if (send(new_socket, server_response, strlen(server_response), 0) < 0) {
+                perror("SEND FAILED!:\n");
+                exit(EXIT_FAILURE);
+            }
+
+            close(new_socket);
         }
     }
 
