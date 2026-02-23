@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -8,6 +10,12 @@
 #define PORT 8080
 
 #define BUFFER 40000
+
+bool ends_with(const std::string& str, const std::string& suffix) {
+    return str.size() >= suffix.size()
+    &&
+    str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
 
 int main() {
 
@@ -19,13 +27,10 @@ int main() {
 
     int opt = 1;
 
-    char server_response[BUFFER];
-
     char client_request[BUFFER];
 
-    const char *get_html;
-
-    const char *html_header;
+    const char *response;
+    // const char *header;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("SOCKET CREATION FAILED!:\n");
@@ -53,21 +58,6 @@ int main() {
 
     std::cout << "\nListen on port 8080!\n" << std::endl;
 
-    html_header = 
-    "HTTP/1.1 200 OK\r\n"
-    "Content-type: text/html; charset=utf-8\r\n"
-    "Content-length: %zu\r\n"
-    "\r\n"
-    "%s";
-
-    get_html = 
-    "<!DOCTYPE html>"
-    "<html>"
-    "<head><title>RawServer</title></head>"
-    "<body><h2>GET REQUEST</h2></body>"
-    "<body><h4>HTTP server running at port 8080!</h4></body>"
-    "</html>";
-
     while (true) {
 
         std::cout << "Waiting for connections...\n" << std::endl;
@@ -79,10 +69,12 @@ int main() {
 
         memset(client_request, 0, sizeof(client_request));
 
-        if(recv(new_socket, client_request, sizeof(client_request), 0) < 0) {
+        if (recv(new_socket, client_request, sizeof(client_request), 0) < 0) {
             perror("RECEIVE FAILED!:\n");
             exit(EXIT_FAILURE);
         }
+
+        // Extract Method
 
         std::cout << "RECEIVED REQUEST:\n" << client_request << std::endl;
 
@@ -99,21 +91,58 @@ int main() {
 
         if (method == "GET" && path == "/") {
 
-            if ((snprintf(server_response, sizeof(server_response), html_header, strlen(get_html), get_html)) < 0) {
-                perror("FORMATING ERROR!:\n");
-                exit(EXIT_FAILURE);
+            std::ifstream file("index.html");
+
+            if (!file.is_open()) {
+                perror("NOT FOUND!:");
+
+                response = 
+                "HTTP/1.1 404 Not Found\r\n"
+                "Content-type: text/plain\r\n"
+                "Content-length: 13\r\n"
+                "\r\n"
+                "404 Not Found!";
+
+                if ((send(new_socket, response, strlen(response), 0)) < 0) {
+                    perror("RECEIVE FAILED!:\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                close(new_socket);
             }
 
-            if (send(new_socket, server_response, strlen(server_response), 0) < 0) {
-                perror("SEND FAILED!:\n");
+            std::ostringstream buffer_stream;
+            buffer_stream << file.rdbuf();
+            std::string body = buffer_stream.str();
+            file.close();
+
+            std::string response = 
+            "HTTP/1.1 200 OK\r\n"
+            "Content-type: text/html; charset=UTF-8\r\n"
+            "Content-length: " + std::to_string(body.length()) + "\r\n"
+            "\r\n" + body;
+
+            if ((send(new_socket, response.c_str(), response.length(), 0)) < 0) {
+                perror("SEND FAILED!:");
                 exit(EXIT_FAILURE);
             }
-
-            close(new_socket);
         }
+
+        response = 
+        "HTTP/1.1 405 \r\n"
+        "Content-type: text/plain\r\n"
+        "Content-length: 23\r\n"
+        "\r\n"
+        "405 Method Not Allowed!";
+
+        if ((send(new_socket, response, strlen(response), 0)) < 0) {
+            perror("SEND FAILED!:\n");
+            exit(EXIT_FAILURE);
+        }
+
+        close(new_socket);
     }
 
     close(server_fd);
-
     return 0;
 }
