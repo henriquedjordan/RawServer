@@ -30,7 +30,6 @@ int main() {
     char client_request[BUFFER];
 
     const char *response;
-    // const char *header;
 
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("SOCKET CREATION FAILED!:\n");
@@ -73,8 +72,6 @@ int main() {
             perror("RECEIVE FAILED!:\n");
             exit(EXIT_FAILURE);
         }
-
-        // Extract Method
 
         std::cout << "RECEIVED REQUEST:\n" << client_request << std::endl;
 
