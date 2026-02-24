@@ -29,8 +29,6 @@ int main() {
 
     char client_request[BUFFER];
 
-    const char *response;
-
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("SOCKET CREATION FAILED!:\n");
         exit(EXIT_FAILURE);
@@ -77,7 +75,7 @@ int main() {
 
         std::string request(client_request);
 
-        size_t line_end = request.find("\n\r");
+        size_t line_end = request.find("\r\n");
         std::string request_line = request.substr(0, line_end);
 
         size_t first_space = request_line.find(" ");
@@ -86,26 +84,33 @@ int main() {
         std::string method = request_line.substr(0, first_space);
         std::string path = request_line.substr(first_space + 1, second_space - first_space - 1);
 
-        if (method == "GET" && path == "/") {
+        if (method == "GET") {
 
-            std::ifstream file("index.html");
+            std::string file_path;
+
+            if (path == "/")
+                file_path = "index.html";
+            else
+                file_path = "." + path;
+
+            std::ifstream file(file_path, std::ios::binary);
 
             if (!file.is_open()) {
-                perror("NOT FOUND!:");
 
-                response = 
+                perror("NOT FOUND!:");
+                const char *status_404 = 
                 "HTTP/1.1 404 Not Found\r\n"
                 "Content-type: text/plain\r\n"
                 "Content-length: 13\r\n"
                 "\r\n"
                 "404 Not Found!";
 
-                if ((send(new_socket, response, strlen(response), 0)) < 0) {
-                    perror("RECEIVE FAILED!:\n");
+                if ((send(new_socket, status_404, strlen(status_404), 0)) < 0) {
+                    perror("SEND FAILED!:\n");
                     exit(EXIT_FAILURE);
                 }
 
-                close(new_socket);
+                continue;
             }
 
             std::ostringstream buffer_stream;
@@ -113,26 +118,34 @@ int main() {
             std::string body = buffer_stream.str();
             file.close();
 
+            std::string content_type = "text/plain";
+            if (ends_with(file_path, ".html")) content_type = "text/html";
+            else if (ends_with(file_path, ".css")) content_type = "text/css";
+            else if (ends_with(file_path, ".js")) content_type = "application/javascript";
+            else if (ends_with(file_path, ".json")) content_type = "application/json";
+            else if (ends_with(file_path, ".png")) content_type = "image/png";
+            else if (ends_with(file_path, ".jpg") || ends_with(file_path, ".jpeg")) content_type = "image/jpeg";
+
             std::string response = 
             "HTTP/1.1 200 OK\r\n"
-            "Content-type: text/html; charset=UTF-8\r\n"
-            "Content-length: " + std::to_string(body.length()) + "\r\n"
+            "Content-type: " + content_type + "\r\n"
+            "Content-length: " + std::to_string(body.size()) + "\r\n"
             "\r\n" + body;
 
-            if ((send(new_socket, response.c_str(), response.length(), 0)) < 0) {
+            if ((send(new_socket, response.c_str(), response.size(), 0)) < 0) {
                 perror("SEND FAILED!:");
                 exit(EXIT_FAILURE);
-            }
+            }   
         }
 
-        response = 
-        "HTTP/1.1 405 \r\n"
+        const char* status_405 = 
+        "HTTP/1.1 405 Method Not Allowed\r\n"
         "Content-type: text/plain\r\n"
         "Content-length: 23\r\n"
         "\r\n"
         "405 Method Not Allowed!";
 
-        if ((send(new_socket, response, strlen(response), 0)) < 0) {
+        if ((send(new_socket, status_405, strlen(status_405), 0)) < 0) {
             perror("SEND FAILED!:\n");
             exit(EXIT_FAILURE);
         }
@@ -140,6 +153,6 @@ int main() {
         close(new_socket);
     }
 
-    close(server_fd);
+    close(server_fd); 
     return 0;
 }
