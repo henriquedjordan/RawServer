@@ -2,9 +2,10 @@
 > An HTTP Web server with no frameworks, no libraries, no excuses
 
 ## Features
--  Accepts real TCP connections
--  Manually parses HTTP/1.1 requests (yes, with `\r\n`)
--  Crafts valid HTTP responses with your bare hands
+- Socket programming
+- HTTP protocol 
+- File serving
+- Network communication
 
 ## How to use
 
