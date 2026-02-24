@@ -1,5 +1,5 @@
 # RawServer
-> An HTTP server with no frameworks, no libraries, no excuses
+> An HTTP Web server with no frameworks, no libraries, no excuses
 
 ## Features
 -  Accepts real TCP connections
