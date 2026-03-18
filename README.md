@@ -2,10 +2,9 @@
 > An HTTP Web server with no frameworks, no libraries, no excuses
 
 ## Features
-- Socket programming
-- HTTP protocol 
-- File serving
-- Network communication
+- Accepts real TCP connections
+- Serves files directly from the filesystem
+- Decides what to serve based on the URL
 
 ## How to use
 
